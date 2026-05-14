@@ -4,3 +4,4 @@ backend/plainpocket.db
 *.db
 node_modules/
 dist/
+backend/uploads/
