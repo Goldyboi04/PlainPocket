@@ -5,3 +5,5 @@ backend/plainpocket.db
 node_modules/
 dist/
 backend/uploads/
+backend/scratch/
+*.pkl

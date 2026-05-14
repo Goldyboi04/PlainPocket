@@ -8,6 +8,8 @@ from config import Config
 from app.db import init_db
 from app.auth.routes import auth_bp
 from app.upload.routes import upload_bp
+from app.transactions.routes import transactions_bp
+from app.statements.routes import statements_bp
 
 
 def create_app():
@@ -22,6 +24,8 @@ def create_app():
     # Blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(upload_bp)
+    app.register_blueprint(transactions_bp)
+    app.register_blueprint(statements_bp)
 
     # Initialize database
     with app.app_context():

@@ -1,12 +1,13 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import ThemeToggle from "../context/ThemeToggle";
 import "./Upload.css";
 
-const BANKS = ["HDFC", "SBI", "ICICI", "AXIS"];
+const BANKS = ["AUTO", "HDFC", "SBI", "ICICI", "AXIS"];
 
 export default function Upload() {
-  const [selectedBank, setSelectedBank] = useState("");
+  const [selectedBank, setSelectedBank] = useState("AUTO");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -70,6 +71,12 @@ export default function Upload() {
 
   return (
     <div className="upload-layout">
+      <div style={{ position: "absolute", top: "24px", right: "24px", display: "flex", gap: "16px", alignItems: "center" }}>
+        <button onClick={() => navigate("/dashboard")} style={{ background: "transparent", border: "none", color: "var(--color-text-secondary)", cursor: "pointer", fontWeight: 500 }}>
+          Cancel
+        </button>
+        <ThemeToggle />
+      </div>
       <main className="upload-main">
         <div className="upload-header">
           <h1>Upload Statement</h1>
@@ -86,7 +93,7 @@ export default function Upload() {
                   className={`bank-option ${selectedBank === bank ? "active" : ""}`}
                   onClick={() => setSelectedBank(bank)}
                 >
-                  {bank}
+                  {bank === "AUTO" ? "Auto-Detect" : bank}
                 </div>
               ))}
             </div>

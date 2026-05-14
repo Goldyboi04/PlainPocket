@@ -209,6 +209,91 @@
   font-weight: 500;
 }
 
+/* --- Transactions Table --- */
+.dash-transactions {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.dash-transactions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dash-transactions-header h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.dash-table th, .dash-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dash-table th {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--color-bg-alt);
+}
+
+.dash-table td {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.dash-table tr:last-child td {
+  border-bottom: none;
+}
+
+.align-right {
+  text-align: right;
+}
+
+.merchant-cell {
+  font-weight: 500;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.amount-debit {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.amount-credit {
+  color: #10B981; /* Green color for positive */
+  font-weight: 600;
+}
+
 /* --- Responsive --- */
 @media (max-width: 640px) {
   .dash-grid {
@@ -221,5 +306,9 @@
 
   .dash-welcome h1 {
     font-size: var(--font-size-xl);
+  }
+  
+  .dash-table th, .dash-table td {
+    padding: 12px 16px;
   }
 }

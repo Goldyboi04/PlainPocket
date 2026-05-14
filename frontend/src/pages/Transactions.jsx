@@ -3,13 +3,12 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import ThemeToggle from "../context/ThemeToggle";
-import "./Dashboard.css";
+import "./Dashboard.css"; // Reuse dashboard styles
 
-export default function Dashboard() {
+export default function Transactions() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
-  const [summary, setSummary] = useState({ total_transactions: 0, current_balance: 0, total_spent: 0 });
   const [loading, setLoading] = useState(true);
 
   const CATEGORIES = [
@@ -19,30 +18,25 @@ export default function Dashboard() {
     "Income", "Bank Charges", "Uncategorized"
   ];
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchTransactions = async () => {
       try {
         const token = localStorage.getItem("pp_token");
-        const headers = { Authorization: `Bearer ${token}` };
-        
-        // Fetch summary
-        const summaryRes = await axios.get("http://localhost:5000/api/transactions/summary", { headers });
-        if (summaryRes.data.success) {
-          setSummary(summaryRes.data.summary);
-        }
-        
-        // Fetch recent transactions (limit to 5)
-        const txnsRes = await axios.get("http://localhost:5000/api/transactions/?limit=5", { headers });
-        if (txnsRes.data.success) {
-          setTransactions(txnsRes.data.transactions);
+        // Fetch a larger limit for the all transactions view
+        const response = await axios.get("http://localhost:5000/api/transactions/?limit=1000", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setTransactions(response.data.transactions);
         }
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Error fetching transactions:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+
+  useEffect(() => {
+    fetchTransactions();
   }, []);
 
   const handleCategoryChange = async (txnId, newCategory) => {
@@ -52,7 +46,7 @@ export default function Dashboard() {
         { category: newCategory },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Update local state without full refetch
+      // Update local state without full refetch for better UX
       setTransactions(transactions.map(txn => 
         txn.id === txnId ? { ...txn, category: newCategory } : txn
       ));
@@ -71,8 +65,6 @@ export default function Dashboard() {
     ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
     : "U";
 
-  // Totals are now fetched directly from the backend summary API.
-
   return (
     <div className="dash-layout">
       <header className="dash-header">
@@ -86,8 +78,9 @@ export default function Dashboard() {
         </div>
         
         <div className="dash-nav" style={{ flex: 1, marginLeft: "40px", display: "flex", gap: "20px" }}>
-          <span style={{ cursor: "pointer", color: "var(--color-text)", fontWeight: 600 }}>Dashboard</span>
+          <span onClick={() => navigate("/dashboard")} style={{ cursor: "pointer", color: "var(--color-text-secondary)", fontWeight: 500 }}>Dashboard</span>
           <span onClick={() => navigate("/statements")} style={{ cursor: "pointer", color: "var(--color-text-secondary)", fontWeight: 500 }}>Statements</span>
+          <span style={{ cursor: "pointer", color: "var(--color-text)", fontWeight: 600 }}>Transactions</span>
         </div>
 
         <div className="dash-header-right">
@@ -99,26 +92,8 @@ export default function Dashboard() {
 
       <main className="dash-main">
         <div className="dash-welcome">
-          <h1>Good {getGreeting()}, {user?.name?.split(" ")[0] || "there"}</h1>
-          <p>Here's what's happening with your finances.</p>
-        </div>
-
-        <div className="dash-grid">
-          <div className="dash-card">
-            <div className="dash-card-label">Total balance</div>
-            <div className="dash-card-value">₹{summary.current_balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-            <div className="dash-card-note">{summary.total_transactions > 0 ? 'Current available balance' : 'Connect a bank to get started'}</div>
-          </div>
-          <div className="dash-card">
-            <div className="dash-card-label">Total Spent</div>
-            <div className="dash-card-value">₹{summary.total_spent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-            <div className="dash-card-note">Across all tracked expenses</div>
-          </div>
-          <div className="dash-card">
-            <div className="dash-card-label">Total Transactions</div>
-            <div className="dash-card-value">{summary.total_transactions}</div>
-            <div className="dash-card-note">Across all statements</div>
-          </div>
+          <h1>All Transactions</h1>
+          <p>Review and search through all your parsed bank transactions.</p>
         </div>
 
         {loading ? (
@@ -135,30 +110,14 @@ export default function Dashboard() {
                 <line x1="9" y1="15" x2="15" y2="15" />
               </svg>
             </div>
-            <h2>Upload your first statement</h2>
-            <p>Drop a CSV bank statement and we'll parse it into a clean, categorized view of your spending.</p>
+            <h2>No transactions yet</h2>
+            <p>Upload a statement to begin tracking.</p>
             <button className="dash-upload-btn" onClick={() => navigate("/upload")}>
               Upload statement
-              <span className="dash-badge">New</span>
             </button>
           </div>
         ) : (
           <div className="dash-transactions">
-            <div className="dash-transactions-header">
-              <h2>Recent Transactions</h2>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  className="dash-upload-btn" 
-                  style={{ background: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }} 
-                  onClick={() => navigate("/all-transactions")}
-                >
-                  View All
-                </button>
-                <button className="dash-upload-btn" onClick={() => navigate("/upload")}>
-                  Upload More
-                </button>
-              </div>
-            </div>
             <div className="table-container">
               <table className="dash-table">
                 <thead>
@@ -202,11 +161,4 @@ export default function Dashboard() {
       </main>
     </div>
   );
-}
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "morning";
-  if (hour < 17) return "afternoon";
-  return "evening";
 }

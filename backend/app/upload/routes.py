@@ -6,6 +6,8 @@ from werkzeug.utils import secure_filename
 
 from app.db import get_db
 from app.upload.parsers import get_parser
+from app.analysis.merchant_cleaner import clean_merchant_name
+from app.analysis.categorizer import predict_category
 
 upload_bp = Blueprint("upload", __name__, url_prefix="/api/upload")
 
@@ -28,10 +30,10 @@ def upload_statement():
         return jsonify({"success": False, "message": "No file part"}), 400
     
     file = request.files['file']
-    bank_name = request.form.get('bank_name')
+    bank_name = request.form.get('bank_name', 'AUTO')
     
     if not bank_name:
-        return jsonify({"success": False, "message": "Bank name is required"}), 400
+        bank_name = "AUTO"
     
     if file.filename == '':
         return jsonify({"success": False, "message": "No selected file"}), 400
@@ -60,6 +62,12 @@ def upload_statement():
             if not transactions:
                 return jsonify({"success": False, "message": "No transactions found in the file. Please check the format."}), 400
             
+            # Clean descriptions and categorize
+            for txn in transactions:
+                txn['raw_description'] = txn['description']
+                txn['description'] = clean_merchant_name(txn['description'])
+                txn['category'] = predict_category(txn['description'])
+            
             # 3. Save file to disk
             filename = secure_filename(file.filename)
             # Add user_id prefix to filename to avoid collisions
@@ -71,12 +79,14 @@ def upload_statement():
             file.save(file_path)
             
             # 4. Insert Metadata
+            db_bank_name = bank_name if bank_name.upper() != 'AUTO' else 'Bank_1'
+            
             with db.cursor() as cursor:
                 cursor.execute(
                     """INSERT INTO bank_statements 
                        (user_id, bank_name, file_name, file_path, file_hash) 
                        VALUES (%s, %s, %s, %s, %s)""",
-                    (user_id, bank_name, filename, file_path, file_hash)
+                    (user_id, db_bank_name, filename, file_path, file_hash)
                 )
                 statement_id = cursor.lastrowid
             
@@ -85,9 +95,9 @@ def upload_statement():
                 for txn in transactions:
                     cursor.execute(
                         """INSERT INTO transactions 
-                           (statement_id, user_id, txn_date, description, amount, txn_type, balance) 
-                           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                        (statement_id, user_id, txn['date'], txn['description'], txn['amount'], txn['type'], txn['balance'])
+                           (statement_id, user_id, txn_date, description, amount, txn_type, balance, category) 
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                        (statement_id, user_id, txn['date'], txn['description'], txn['amount'], txn['type'], txn['balance'], txn['category'])
                     )
             
             db.commit()
