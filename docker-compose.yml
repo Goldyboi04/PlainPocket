@@ -1,6 +1,20 @@
 version: "3.8"
 
 services:
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: plainpocket
+      MYSQL_USER: pp_user
+      MYSQL_PASSWORD: pp_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
   backend:
     build:
       context: ./backend
@@ -12,6 +26,12 @@ services:
       - /app/__pycache__
     environment:
       - FLASK_ENV=development
+      - MYSQL_HOST=db
+      - MYSQL_USER=pp_user
+      - MYSQL_PASSWORD=pp_password
+      - MYSQL_DB=plainpocket
+    depends_on:
+      - db
     restart: unless-stopped
 
   frontend:
@@ -28,3 +48,19 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=db
+      - PMA_USER=pp_user
+      - PMA_PASSWORD=pp_password
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:

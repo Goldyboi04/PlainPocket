@@ -1,0 +1,208 @@
+/* ===========================
+   Upload Page Styles
+   =========================== */
+
+.upload-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.upload-main {
+  flex: 1;
+  padding: 32px 24px;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.upload-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.upload-header h1 {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.4px;
+  margin-bottom: 8px;
+}
+
+.upload-header p {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* --- Upload Card --- */
+.upload-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-sm);
+}
+
+.bank-selector {
+  margin-bottom: 24px;
+}
+
+.bank-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.bank-option {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  cursor: pointer;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.bank-option:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.bank-option.active {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* --- Dropzone --- */
+.dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-bg-alt);
+}
+
+.dropzone:hover, .dropzone.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+}
+
+.dropzone-icon {
+  margin-bottom: 16px;
+  color: var(--color-text-muted);
+}
+
+.dropzone-text h3 {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.dropzone-text p {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.selected-file {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.remove-file {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* --- Progress Bar --- */
+.progress-container {
+  margin-top: 24px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  margin-top: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* --- Messages --- */
+.upload-message {
+  margin-top: 24px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.upload-message.success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid rgba(26, 127, 90, 0.2);
+}
+
+.upload-message.error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid rgba(197, 48, 48, 0.2);
+}
+
+/* --- Submit Button --- */
+.upload-submit-btn {
+  width: 100%;
+  margin-top: 24px;
+  padding: 12px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.upload-submit-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.upload-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -50,78 +50,131 @@ export default function Signup() {
 
   return (
     <div className="auth-page" id="signup-page">
-      <div className="auth-brand-panel">
-        <div className="auth-orb auth-orb-1" />
-        <div className="auth-orb auth-orb-2" />
-        <div className="brand-content">
-          <div className="brand-logo">
-            <div className="brand-icon">💰</div>
-            <span className="brand-name">PlainPocket</span>
+      <div className="auth-card">
+        <div className="auth-logo">
+          <div className="auth-logo-mark">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 17l10-5 10 5M2 12l10-5 10 5" />
+            </svg>
           </div>
-          <p className="brand-tagline">Take control of your finances. Upload statements, get AI insights, and never lose track of your money again.</p>
-          <ul className="brand-features">
-            <li><span className="feature-icon">🔐</span>Your data stays private & secure</li>
-            <li><span className="feature-icon">⚡</span>Set up in under 2 minutes</li>
-            <li><span className="feature-icon">🎯</span>Smart budgets & spending alerts</li>
-            <li><span className="feature-icon">📱</span>Works on any device, anywhere</li>
-          </ul>
+          <span className="auth-logo-text">PlainPocket</span>
         </div>
-      </div>
-      <div className="auth-form-panel">
-        <div className="auth-form-container">
-          <div className="auth-form-header">
-            <h1>Create account</h1>
-            <p>Start tracking your finances in plain language</p>
+
+        <div className="auth-header">
+          <h1>Create an account</h1>
+          <p>Start tracking your finances</p>
+        </div>
+
+        {errors.general && <div className="form-error-banner">{errors.general}</div>}
+
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="form-group">
+            <label className="form-label" htmlFor="signup-name">Full name</label>
+            <input
+              id="signup-name"
+              className={`form-input ${errors.name ? "error" : ""}`}
+              type="text"
+              name="name"
+              placeholder="Dhruv Sharma"
+              value={form.name}
+              onChange={handleChange}
+              autoComplete="name"
+              autoFocus
+            />
+            {errors.name && <div className="form-error">{errors.name}</div>}
           </div>
-          {errors.general && <div className="form-error-general">⚠️ {errors.general}</div>}
-          <form onSubmit={handleSubmit} noValidate>
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-name">Full Name</label>
-              <div className="form-input-wrapper">
-                <span className="form-input-icon">👤</span>
-                <input id="signup-name" className={`form-input ${errors.name ? "error" : ""}`} type="text" name="name" placeholder="Dhruv Sharma" value={form.name} onChange={handleChange} autoComplete="name" autoFocus />
-              </div>
-              {errors.name && <div className="form-error">{errors.name}</div>}
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="signup-mobile">Mobile number</label>
+            <input
+              id="signup-mobile"
+              className={`form-input ${errors.mobile ? "error" : ""}`}
+              type="tel"
+              name="mobile"
+              placeholder="9876543210"
+              value={form.mobile}
+              onChange={handleChange}
+              maxLength={10}
+              autoComplete="tel"
+            />
+            {errors.mobile && <div className="form-error">{errors.mobile}</div>}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="signup-email">Email</label>
+            <input
+              id="signup-email"
+              className={`form-input ${errors.email ? "error" : ""}`}
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={handleChange}
+              autoComplete="email"
+            />
+            {errors.email && <div className="form-error">{errors.email}</div>}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="signup-password">Password</label>
+            <div className="password-wrapper">
+              <input
+                id="signup-password"
+                className={`form-input ${errors.password ? "error" : ""}`}
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Min. 6 characters"
+                value={form.password}
+                onChange={handleChange}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
             </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-mobile">Mobile Number</label>
-              <div className="form-input-wrapper">
-                <span className="form-input-icon">📱</span>
-                <input id="signup-mobile" className={`form-input ${errors.mobile ? "error" : ""}`} type="tel" name="mobile" placeholder="9876543210" value={form.mobile} onChange={handleChange} maxLength={10} autoComplete="tel" />
-              </div>
-              {errors.mobile && <div className="form-error">{errors.mobile}</div>}
+            {errors.password && <div className="form-error">{errors.password}</div>}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="signup-confirm">Confirm password</label>
+            <div className="password-wrapper">
+              <input
+                id="signup-confirm"
+                className={`form-input ${errors.confirmPassword ? "error" : ""}`}
+                type={showConfirm ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Re-enter your password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirm(!showConfirm)}
+                tabIndex={-1}
+                aria-label={showConfirm ? "Hide password" : "Show password"}
+              >
+                {showConfirm ? "Hide" : "Show"}
+              </button>
             </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-email">Email Address</label>
-              <div className="form-input-wrapper">
-                <span className="form-input-icon">✉️</span>
-                <input id="signup-email" className={`form-input ${errors.email ? "error" : ""}`} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
-              </div>
-              {errors.email && <div className="form-error">{errors.email}</div>}
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-password">Password</label>
-              <div className="form-input-wrapper">
-                <span className="form-input-icon">🔒</span>
-                <input id="signup-password" className={`form-input ${errors.password ? "error" : ""}`} type={showPassword ? "text" : "password"} name="password" placeholder="Min. 6 characters" value={form.password} onChange={handleChange} autoComplete="new-password" />
-                <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>{showPassword ? "🙈" : "👁️"}</button>
-              </div>
-              {errors.password && <div className="form-error">{errors.password}</div>}
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-confirm">Confirm Password</label>
-              <div className="form-input-wrapper">
-                <span className="form-input-icon">🔒</span>
-                <input id="signup-confirm" className={`form-input ${errors.confirmPassword ? "error" : ""}`} type={showConfirm ? "text" : "password"} name="confirmPassword" placeholder="Re-enter your password" value={form.confirmPassword} onChange={handleChange} autoComplete="new-password" />
-                <button type="button" className="password-toggle" onClick={() => setShowConfirm(!showConfirm)} tabIndex={-1}>{showConfirm ? "🙈" : "👁️"}</button>
-              </div>
-              {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
-            </div>
-            <button type="submit" className="auth-submit-btn" id="signup-submit" disabled={loading}>
-              {loading && <span className="btn-spinner" />}{loading ? "Creating account..." : "Create Account"}
-            </button>
-          </form>
-          <div className="auth-form-footer">Already have an account?<Link to="/login">Sign in</Link></div>
+            {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
+          </div>
+
+          <button type="submit" className="auth-submit-btn" id="signup-submit" disabled={loading}>
+            {loading && <span className="btn-spinner" />}
+            {loading ? "Creating account…" : "Create account"}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          Already have an account?<Link to="/login">Sign in</Link>
         </div>
       </div>
     </div>

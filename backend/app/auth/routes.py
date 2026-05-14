@@ -57,7 +57,10 @@ def signup():
 
     # Check if email already exists
     db = get_db()
-    existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+        existing = cursor.fetchone()
+        
     if existing:
         db.close()
         return jsonify({
@@ -66,7 +69,10 @@ def signup():
         }), 409
 
     # Check if mobile already exists
-    existing_mobile = db.execute("SELECT id FROM users WHERE mobile = ?", (mobile,)).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT id FROM users WHERE mobile = %s", (mobile,))
+        existing_mobile = cursor.fetchone()
+        
     if existing_mobile:
         db.close()
         return jsonify({
@@ -77,14 +83,17 @@ def signup():
     # Hash password and insert
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-    db.execute(
-        "INSERT INTO users (name, mobile, email, password_hash) VALUES (?, ?, ?, ?)",
-        (name, mobile, email, password_hash)
-    )
+    with db.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO users (name, mobile, email, password_hash) VALUES (%s, %s, %s, %s)",
+            (name, mobile, email, password_hash)
+        )
     db.commit()
 
     # Get the newly created user
-    user = db.execute("SELECT id, name, email FROM users WHERE email = ?", (email,)).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT id, name, email FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
     db.close()
 
     # Generate JWT
@@ -117,7 +126,9 @@ def login():
         }), 400
 
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
     db.close()
 
     if not user:
@@ -155,10 +166,12 @@ def get_profile():
     user_id = get_jwt_identity()
 
     db = get_db()
-    user = db.execute(
-        "SELECT id, name, mobile, email, currency, created_at FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, name, mobile, email, currency, created_at FROM users WHERE id = %s",
+            (user_id,)
+        )
+        user = cursor.fetchone()
     db.close()
 
     if not user:
