@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import ThemeToggle from "../context/ThemeToggle";
 import "./Upload.css";
 
 const BANKS = ["AUTO", "HDFC", "SBI", "ICICI", "AXIS"];
@@ -70,18 +69,11 @@ export default function Upload() {
   };
 
   return (
-    <div className="upload-layout">
-      <div style={{ position: "absolute", top: "24px", right: "24px", display: "flex", gap: "16px", alignItems: "center" }}>
-        <button onClick={() => navigate("/dashboard")} style={{ background: "transparent", border: "none", color: "var(--color-text-secondary)", cursor: "pointer", fontWeight: 500 }}>
-          Cancel
-        </button>
-        <ThemeToggle />
+    <div className="dash-content-wrapper">
+      <div className="dash-welcome">
+        <h1>Upload Statement</h1>
+        <p>Select your bank and upload your CSV statement to start tracking.</p>
       </div>
-      <main className="upload-main">
-        <div className="upload-header">
-          <h1>Upload Statement</h1>
-          <p>Select your bank and upload your CSV statement to start tracking.</p>
-        </div>
 
         <div className="upload-card">
           <div className="bank-selector">
@@ -156,7 +148,6 @@ export default function Upload() {
             {uploading ? "Processing..." : "Import Statement"}
           </button>
         </div>
-      </main>
     </div>
   );
 }

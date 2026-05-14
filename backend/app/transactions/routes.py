@@ -50,14 +50,20 @@ def get_summary():
             cursor.execute("SELECT COUNT(*) as total FROM transactions WHERE user_id = %s", (user_id,))
             total_txns = cursor.fetchone()['total'] or 0
 
-            # 2. Latest balance (most recent transaction)
+            # 2. Latest balance (sum of latest balance from each unique bank)
             cursor.execute("""
-                SELECT balance FROM transactions 
-                WHERE user_id = %s 
-                ORDER BY txn_date DESC, id DESC LIMIT 1
+                SELECT SUM(t.balance) as total_balance
+                FROM transactions t
+                JOIN (
+                    SELECT bs.bank_name, MAX(t2.id) as latest_id
+                    FROM transactions t2
+                    JOIN bank_statements bs ON t2.statement_id = bs.id
+                    WHERE t2.user_id = %s
+                    GROUP BY bs.bank_name
+                ) as latest_txns ON t.id = latest_txns.latest_id
             """, (user_id,))
             balance_row = cursor.fetchone()
-            current_balance = balance_row['balance'] if balance_row else 0
+            current_balance = float(balance_row['total_balance']) if balance_row and balance_row['total_balance'] else 0
 
             # 3. Total spent (all debits) instead of just this month to avoid 0s on old dummy data
             cursor.execute("""

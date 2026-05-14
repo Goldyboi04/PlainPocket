@@ -81,6 +81,20 @@ def init_db():
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             """)
+            # Budgets table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS budgets (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    category VARCHAR(100) DEFAULT 'Global',
+                    amount DECIMAL(15, 2) NOT NULL,
+                    month INT NOT NULL,
+                    year INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY unique_budget (user_id, category, month, year),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            """)
         conn.commit()
         print("[OK] Database initialized successfully.")
     finally:

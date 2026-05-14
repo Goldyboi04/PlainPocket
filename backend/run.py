@@ -10,6 +10,7 @@ from app.auth.routes import auth_bp
 from app.upload.routes import upload_bp
 from app.transactions.routes import transactions_bp
 from app.statements.routes import statements_bp
+from app.budget.routes import budget_bp
 
 
 def create_app():
@@ -26,6 +27,7 @@ def create_app():
     app.register_blueprint(upload_bp)
     app.register_blueprint(transactions_bp)
     app.register_blueprint(statements_bp)
+    app.register_blueprint(budget_bp)
 
     # Initialize database
     with app.app_context():

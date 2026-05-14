@@ -147,6 +147,35 @@
   color: var(--color-text-muted);
 }
 
+.dash-progress-container {
+  margin-top: 16px;
+}
+
+.dash-progress-bg {
+  height: 6px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.dash-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+}
+
+.dash-progress-fill.danger {
+  background: var(--color-danger);
+}
+
+.dash-progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
 /* --- Empty State --- */
 .dash-empty-state {
   text-align: center;

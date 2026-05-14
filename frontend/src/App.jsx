@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Statements from "./pages/Statements";
 import Transactions from "./pages/Transactions";
+import Budget from "./pages/Budget";
+import Layout from "./components/Layout";
 import "./index.css";
 
 function ProtectedRoute({ children }) {
@@ -26,11 +28,25 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
-      <Route path="/statements" element={<ProtectedRoute><Statements /></ProtectedRoute>} />
-      <Route path="/all-transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      
+      {/* Protected Routes wrapped in Layout */}
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Routes>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/upload" element={<Upload />} />
+                <Route path="/statements" element={<Statements />} />
+                <Route path="/all-transactions" element={<Transactions />} />
+                <Route path="/budget" element={<Budget />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
