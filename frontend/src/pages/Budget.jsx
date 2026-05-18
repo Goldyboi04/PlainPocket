@@ -20,9 +20,10 @@ export default function Budget() {
     year: 0,
     categories: [] 
   });
-  const [newLimit, setNewLimit] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [tempLimit, setTempLimit] = useState("");
+  const [savingCategory, setSavingCategory] = useState(false);
 
   const fetchBudget = async () => {
     try {
@@ -32,7 +33,6 @@ export default function Budget() {
       });
       if (response.data.success) {
         setBudget(response.data.budget);
-        setNewLimit(response.data.budget.limit || "");
       }
     } catch (error) {
       console.error("Failed to fetch budget:", error);
@@ -45,23 +45,24 @@ export default function Budget() {
     fetchBudget();
   }, []);
 
-  const handleUpdateBudget = async (e) => {
-    e.preventDefault();
-    if (!newLimit || isNaN(newLimit)) return;
-
-    setSaving(true);
+  const handleUpdateCategoryBudget = async (category, limitValue) => {
+    setSavingCategory(true);
     try {
       const token = localStorage.getItem("pp_token");
       await axios.post("http://localhost:5000/api/budget/", 
-        { amount: parseFloat(newLimit) },
+        { 
+          amount: limitValue === "" ? 0.0 : parseFloat(limitValue), 
+          category: category 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      setEditingCategory(null);
       fetchBudget();
     } catch (error) {
-      console.error("Failed to update budget:", error);
-      alert("Failed to update budget. Please try again.");
+      console.error("Failed to update category budget:", error);
+      alert("Failed to update category budget. Please try again.");
     } finally {
-      setSaving(false);
+      setSavingCategory(false);
     }
   };
 
@@ -116,15 +117,15 @@ export default function Budget() {
               <h3>Spending by Category</h3>
               <div className="chart-wrapper">
                 {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart margin={{ top: 20, right: 10, bottom: 10, left: 10 }}>
                       <Pie
                         data={chartData}
                         cx="50%"
                         cy="45%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={5}
+                        innerRadius={40}
+                        outerRadius={65}
+                        paddingAngle={4}
                         dataKey="value"
                       >
                         {chartData.map((entry, index) => (
@@ -135,7 +136,7 @@ export default function Budget() {
                         formatter={(value) => `₹${value.toLocaleString('en-IN')}`}
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                       />
-                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Legend wrapperStyle={{ paddingTop: '5px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -148,7 +149,7 @@ export default function Budget() {
               <h3>Category Comparison</h3>
               <div className="chart-wrapper">
                 {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={350}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 30 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--color-border)" />
                       <XAxis type="number" hide />
@@ -180,39 +181,104 @@ export default function Budget() {
         </div>
 
         <div className="budget-side-col">
-          <div className="budget-settings-card">
-            <h3>Set Monthly Limit</h3>
-            <form onSubmit={handleUpdateBudget}>
-              <div className="input-group">
-                <span className="currency-prefix">₹</span>
-                <input 
-                  type="number" 
-                  placeholder="Enter amount"
-                  value={newLimit}
-                  onChange={(e) => setNewLimit(e.target.value)}
-                  min="0"
-                  step="500"
-                />
-              </div>
-              <button type="submit" disabled={saving} className="update-btn">
-                {saving ? "Saving..." : "Update Budget"}
-              </button>
-            </form>
-            <p className="settings-note">Your budget resets on the 1st of every month.</p>
-          </div>
-
           <div className="category-list-card">
-            <h3>Top Expenses</h3>
-            <div className="category-list">
-              {chartData.map((cat, i) => (
-                <div key={cat.name} className="category-item">
-                  <div className="category-item-info">
-                    <div className="category-color" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
-                    <span className="category-name">{cat.name}</span>
+            <div className="category-list-header">
+              <h3>Category Budgets</h3>
+            </div>
+            <p className="settings-note" style={{ textAlign: 'left', marginTop: '-10px', marginBottom: '20px', fontSize: 'var(--font-size-xs)' }}>
+              Set individual limits for your expense categories (excluding Income).
+            </p>
+            <div className="category-budget-list">
+              {chartData.map((cat, i) => {
+                const isOver = cat.limit > 0 && cat.spent > cat.limit;
+                const pct = cat.limit > 0 ? Math.min((cat.spent / cat.limit) * 100, 100) : 0;
+                const isEditing = editingCategory === cat.name;
+
+                return (
+                  <div key={cat.name} className="category-budget-row">
+                    <div className="category-budget-header">
+                      <div className="category-item-info">
+                        <div className="category-color" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
+                        <span className="category-name">{cat.name}</span>
+                      </div>
+                      
+                      <div className="category-budget-actions">
+                        {isEditing ? (
+                          <div className="compact-edit-wrapper">
+                            <span className="compact-currency">₹</span>
+                            <input
+                              type="number"
+                              value={tempLimit}
+                              onChange={(e) => setTempLimit(e.target.value)}
+                              className="compact-input"
+                              placeholder="Limit"
+                              autoFocus
+                              min="0"
+                              step="500"
+                            />
+                            <button 
+                              onClick={() => handleUpdateCategoryBudget(cat.name, tempLimit)}
+                              className="compact-btn save"
+                              disabled={savingCategory}
+                            >
+                              ✓
+                            </button>
+                            <button 
+                              onClick={() => setEditingCategory(null)}
+                              className="compact-btn cancel"
+                            >
+                              ✗
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="compact-limit-display">
+                            {cat.limit > 0 ? (
+                              <>
+                                <span className="category-limit-val">₹{cat.limit.toLocaleString('en-IN')}</span>
+                                <button 
+                                  onClick={() => { setEditingCategory(cat.name); setTempLimit(cat.limit); }}
+                                  className="category-edit-btn"
+                                  title="Edit Limit"
+                                >
+                                  ✏️
+                                </button>
+                              </>
+                            ) : (
+                              <button 
+                                onClick={() => { setEditingCategory(cat.name); setTempLimit(""); }}
+                                className="category-set-btn"
+                              >
+                                + Limit
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="category-spending-info">
+                      <span className="category-spent-text">
+                        ₹{cat.spent.toLocaleString('en-IN')} spent
+                        {cat.limit > 0 ? ` of ₹${cat.limit.toLocaleString('en-IN')}` : ""}
+                      </span>
+                      {cat.limit > 0 && (
+                        <span className={`category-pct-badge ${isOver ? 'danger' : ''}`}>
+                          {pct.toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+
+                    {cat.limit > 0 && (
+                      <div className="category-progress-bg">
+                        <div 
+                          className={`category-progress-fill ${isOver ? 'danger' : ''}`}
+                          style={{ width: `${pct}%` }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
-                  <span className="category-value">₹{cat.value.toLocaleString('en-IN')}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

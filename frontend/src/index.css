@@ -72,7 +72,8 @@
   --color-bg-card: #18181B;
   --color-bg-input: #27272A;
 
-  --color-primary: #34D399; /* Lighter green for better contrast in dark mode */
+  --color-primary: #34D399;
+  /* Lighter green for better contrast in dark mode */
   --color-primary-hover: #10B981;
   --color-primary-subtle: rgba(16, 185, 129, 0.15);
 
@@ -127,6 +128,7 @@ a {
   text-decoration: none;
   transition: color var(--transition-fast);
 }
+
 a:hover {
   color: var(--color-primary-hover);
   text-decoration: underline;
@@ -134,10 +136,19 @@ a:hover {
 
 /* --- Animations (kept minimal) --- */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

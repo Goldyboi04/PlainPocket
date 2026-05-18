@@ -69,6 +69,7 @@ def upload_statement():
                 txn['category'] = predict_category(txn['description'])
             
             # 3. Save file to disk
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             filename = secure_filename(file.filename)
             # Add user_id prefix to filename to avoid collisions
             stored_filename = f"{user_id}_{int(os.path.getmtime(UPLOAD_FOLDER) if os.path.exists(UPLOAD_FOLDER) else 0)}_{filename}"
