@@ -65,12 +65,15 @@ def get_summary():
             balance_row = cursor.fetchone()
             current_balance = float(balance_row['total_balance']) if balance_row and balance_row['total_balance'] else 0
 
-            # 3. Total spent (all debits) instead of just this month to avoid 0s on old dummy data
+            # 3. Total spent (current month only)
+            from datetime import datetime
+            now = datetime.now()
             cursor.execute("""
                 SELECT SUM(amount) as spent 
                 FROM transactions 
                 WHERE user_id = %s AND txn_type = 'debit'
-            """, (user_id,))
+                AND MONTH(txn_date) = %s AND YEAR(txn_date) = %s
+            """, (user_id, now.month, now.year))
             spent_row = cursor.fetchone()
             total_spent = spent_row['spent'] if spent_row and spent_row['spent'] else 0
 
@@ -91,7 +94,7 @@ def get_summary():
 @transactions_bp.route("/<int:txn_id>/category", methods=["PUT"])
 @jwt_required()
 def update_category(txn_id):
-    """Update the category for a specific transaction and retrain the model."""
+    """Update the category for all transactions with the same name/description."""
     user_id = get_jwt_identity()
     data = request.json
     new_category = data.get("category")
@@ -102,26 +105,154 @@ def update_category(txn_id):
     db = get_db()
     try:
         with db.cursor() as cursor:
-            # First verify the transaction belongs to the user
-            cursor.execute("SELECT id FROM transactions WHERE id = %s AND user_id = %s", (txn_id, user_id))
-            if not cursor.fetchone():
+            # First fetch the transaction description to verify ownership and find duplicates
+            cursor.execute(
+                "SELECT description FROM transactions WHERE id = %s AND user_id = %s",
+                (txn_id, user_id)
+            )
+            row = cursor.fetchone()
+            if not row:
                 return jsonify({"success": False, "message": "Transaction not found or unauthorized"}), 404
                 
-            # Update the category
+            description = row['description']
+            
+            # Update all transactions with the same description for this user
             cursor.execute(
-                "UPDATE transactions SET category = %s WHERE id = %s AND user_id = %s",
-                (new_category, txn_id, user_id)
+                "UPDATE transactions SET category = %s WHERE description = %s AND user_id = %s",
+                (new_category, description, user_id)
             )
             db.commit()
             
         # Trigger dynamic retraining in the background or synchronously
-        # For this lightweight model, synchronous retraining takes <10ms
+        # For this lightweight model, retraining takes <10ms
         retrain_model_with_db(db)
             
-        return jsonify({"success": True, "message": "Category updated and model retrained"}), 200
+        return jsonify({
+            "success": True,
+            "message": "Categories updated and model retrained",
+            "description": description
+        }), 200
     except Exception as e:
         db.rollback()
         print(f"Error updating category: {e}")
         return jsonify({"success": False, "message": "Failed to update category"}), 500
     finally:
         db.close()
+
+
+@transactions_bp.route("/months", methods=["GET"])
+@jwt_required()
+def get_transaction_months():
+    """Return distinct (year, month) pairs that have transaction data for the user."""
+    user_id = get_jwt_identity()
+    db = get_db()
+    try:
+        with db.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT DISTINCT
+                    YEAR(txn_date) as year,
+                    MONTH(txn_date) as month
+                FROM transactions
+                WHERE user_id = %s
+                ORDER BY year DESC, month DESC
+                """,
+                (user_id,)
+            )
+            months = cursor.fetchall()
+            return jsonify({"success": True, "months": months}), 200
+    except Exception as e:
+        print(f"Error fetching transaction months: {e}")
+        return jsonify({"success": False, "message": "Failed to fetch months"}), 500
+    finally:
+        db.close()
+
+
+from collections import defaultdict
+
+@transactions_bp.route("/trends", methods=["GET"])
+@jwt_required()
+def get_trends():
+    """Fetch pivoted category-wise monthly trends and automatic insights."""
+    user_id = get_jwt_identity()
+    db = get_db()
+    
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ]
+    
+    try:
+        with db.cursor() as cursor:
+            # Aggregate monthly debit amounts per category
+            cursor.execute(
+                """
+                SELECT YEAR(txn_date) as y, MONTH(txn_date) as m, category, SUM(amount) as total
+                FROM transactions
+                WHERE user_id = %s AND txn_type = 'debit'
+                GROUP BY YEAR(txn_date), MONTH(txn_date), category
+                ORDER BY y ASC, m ASC
+                """,
+                (user_id,)
+            )
+            rows = cursor.fetchall()
+            
+            # Pivot the rows
+            month_map = defaultdict(dict)
+            all_categories = set()
+            
+            for row in rows:
+                key = f"{row['y']}-{row['m']}"
+                month_label = f"{month_names[row['m'] - 1]} {row['y']}"
+                
+                month_map[key]["month"] = month_label
+                month_map[key]["year"] = row['y']
+                month_map[key]["month_num"] = row['m']
+                month_map[key][row['category']] = float(row['total'])
+                all_categories.add(row['category'])
+            
+            # Convert to sorted list
+            trends_data = list(month_map.values())
+            trends_data.sort(key=lambda x: (x["year"], x["month_num"]))
+            
+            # Fill missing categories with 0.0 for consistency
+            categories_list = sorted(list(all_categories))
+            for item in trends_data:
+                for cat in categories_list:
+                    if cat not in item:
+                        item[cat] = 0.0
+            
+            # Generate MoM velocity insights
+            insights = []
+            if len(trends_data) >= 2:
+                current = trends_data[-1]
+                previous = trends_data[-2]
+                
+                for cat in categories_list:
+                    curr_val = current.get(cat, 0.0)
+                    prev_val = previous.get(cat, 0.0)
+                    
+                    if prev_val > 0:
+                        change_pct = ((curr_val - prev_val) / prev_val) * 100
+                        if abs(change_pct) >= 10:
+                            insights.append({
+                                "category": cat,
+                                "direction": "up" if change_pct > 0 else "down",
+                                "percentage": round(abs(change_pct), 1),
+                                "text": f"Your {cat} spending is {'up' if change_pct > 0 else 'down'} by {abs(change_pct):.0f}% compared to last month."
+                            })
+                            
+            insights.sort(key=lambda x: -x["percentage"])
+            
+            return jsonify({
+                "success": True,
+                "categories": categories_list,
+                "trends": trends_data,
+                "insights": insights
+            }), 200
+    except Exception as e:
+        print(f"Error generating trends: {e}")
+        return jsonify({"success": False, "message": "Failed to fetch category trends"}), 500
+    finally:
+        db.close()
+

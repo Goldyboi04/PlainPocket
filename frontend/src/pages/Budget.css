@@ -3,7 +3,7 @@
 }
 
 .budget-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .budget-header h1 {
@@ -17,22 +17,138 @@
   color: var(--color-text-secondary);
 }
 
-.budget-grid {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
+/* ── Month Navigator ── */
+.month-navigator {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  width: fit-content;
+  box-shadow: var(--shadow-sm);
 }
 
-.budget-main-col {
+.month-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.month-nav-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.month-nav-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.month-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.month-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  justify-content: center;
+}
+
+.month-name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.month-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.month-badge.current {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-primary);
+}
+
+.month-badge.past {
+  background: var(--color-bg-alt);
+  color: var(--color-text-muted);
+}
+
+/* ── Past Month Notice ── */
+.past-month-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  color: #b45309;
+  font-size: var(--font-size-sm);
+  margin-bottom: 20px;
+}
+
+.past-month-notice svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #d97706;
+}
+
+/* ── No limit notice ── */
+.no-limit-notice {
+  margin-top: 16px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Readonly label ── */
+.category-limit-val.readonly {
+  cursor: default;
+  opacity: 0.9;
+}
+
+.category-limit-val.muted {
+  opacity: 0.4;
+}
+
+.budget-header h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.budget-header p {
+  color: var(--color-text-secondary);
+}
+
+.budget-layout {
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.budget-side-col {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  width: 100%;
 }
 
 .budget-main-card, .budget-settings-card, .chart-card, .category-list-card {
@@ -163,6 +279,16 @@
   font-weight: 500;
 }
 
+.category-item-info.clickable {
+  cursor: pointer;
+}
+
+.category-item-info.clickable:hover .category-name {
+  text-decoration: underline;
+  color: var(--color-primary);
+}
+
+
 .category-value {
   font-size: var(--font-size-sm);
   font-weight: 600;
@@ -243,23 +369,27 @@
 }
 
 /* Category Budgets Manager Styles */
-.category-budget-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.category-budget-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
 
 .category-budget-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--color-border);
+  gap: 12px;
+  padding: 16px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
-.category-budget-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+.category-budget-row:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .category-budget-header {
@@ -308,30 +438,31 @@
 }
 
 .compact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: none;
-  font-size: var(--font-size-xs);
-  font-weight: bold;
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 2px;
-  transition: background var(--transition-fast);
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  transition: all var(--transition-fast);
 }
 
-.compact-btn.save {
-  color: var(--color-success);
+.compact-btn svg {
+  width: 11px;
+  height: 11px;
+  display: block;
 }
 
-.compact-btn.save:hover {
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.compact-btn.cancel {
-  color: var(--color-danger);
-}
-
-.compact-btn.cancel:hover {
-  background: rgba(239, 68, 68, 0.1);
+.compact-btn:hover {
+  color: var(--color-text);
+  background: var(--color-bg-alt);
+  opacity: 1;
+  transform: scale(1.08);
 }
 
 .compact-limit-display {
@@ -347,18 +478,31 @@
 }
 
 .category-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: var(--font-size-xs);
-  padding: 2px;
-  opacity: 0.5;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  transition: all var(--transition-fast);
 }
 
 .category-edit-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-subtle);
   opacity: 1;
-  transform: scale(1.1);
+  transform: scale(1.05);
+}
+
+.category-edit-btn svg {
+  width: 13px;
+  height: 13px;
+  display: block;
 }
 
 .category-set-btn {
@@ -422,4 +566,17 @@
 .category-progress-fill.danger {
   background: var(--color-danger);
 }
+
+@media (max-width: 950px) {
+  .category-budget-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .category-budget-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 

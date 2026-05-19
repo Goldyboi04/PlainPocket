@@ -54,13 +54,14 @@ export default function Dashboard() {
   const handleCategoryChange = async (txnId, newCategory) => {
     try {
       const token = localStorage.getItem("pp_token");
-      await axios.put(`http://localhost:5000/api/transactions/${txnId}/category`,
+      const response = await axios.put(`http://localhost:5000/api/transactions/${txnId}/category`,
         { category: newCategory },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Update local state without full refetch
+      const description = response.data.description;
+      // Update local state without full refetch for all transactions with same merchant description
       setTransactions(transactions.map(txn =>
-        txn.id === txnId ? { ...txn, category: newCategory } : txn
+        txn.description === description ? { ...txn, category: newCategory } : txn
       ));
     } catch (error) {
       console.error("Failed to update category:", error);
