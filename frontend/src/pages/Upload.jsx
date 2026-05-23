@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 import "./Upload.css";
 
 const BANKS = ["AUTO", "HDFC", "SBI", "ICICI", "AXIS"];
@@ -16,7 +16,12 @@ export default function Upload() {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.type === "text/csv") {
+    if (!selectedFile) return;
+    // Accept by MIME type or file extension — Windows often reports CSV as
+    // "application/vnd.ms-excel" or even an empty string instead of "text/csv".
+    const validTypes = ["text/csv", "application/vnd.ms-excel", "application/csv"];
+    const hasValidExt = selectedFile.name.toLowerCase().endsWith(".csv");
+    if (validTypes.includes(selectedFile.type) || hasValidExt) {
       setFile(selectedFile);
       setMessage(null);
     } else {
@@ -42,13 +47,10 @@ export default function Upload() {
     formData.append("file", file);
     formData.append("bank_name", selectedBank);
 
-    const token = localStorage.getItem("pp_token");
-
     try {
-      const response = await axios.post("http://localhost:5000/api/upload/statement", formData, {
+      const response = await api.post("/upload/statement", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
