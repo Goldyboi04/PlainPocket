@@ -169,6 +169,242 @@ def get_transaction_months():
 
 
 from collections import defaultdict
+import calendar
+from datetime import datetime
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+@transactions_bp.route("/predictions", methods=["GET"])
+@jwt_required()
+def get_predictions():
+    """
+    ML-powered end-of-month spending predictions per category.
+
+    Algorithm:
+      1. Collect historical full-month debit totals per category.
+      2. Fit a per-category LinearRegression on (month_index → total_spend).
+         This captures the trend: is this category growing, shrinking, or flat?
+      3. Blend the trend-based prediction with the current month's actual pace:
+           pace_projection = (spent_so_far / days_elapsed) * days_in_month
+           final = pace_weight * pace + (1 - pace_weight) * trend
+         pace_weight grows linearly as the month progresses (max 0.8 at month-end).
+      4. Join with the user's budget limits → compute budget_status.
+      5. Assign confidence: high / medium / low based on data richness.
+    """
+    user_id = get_jwt_identity()
+    db = get_db()
+
+    try:
+        now = datetime.now()
+        cur_year, cur_month = now.year, now.month
+        days_elapsed = now.day
+        days_in_month = calendar.monthrange(cur_year, cur_month)[1]
+
+        # Pace weight: 0 at day 1 → 0.8 at day 31
+        pace_weight = min((days_elapsed / days_in_month) * 0.8, 0.8)
+        trend_weight = 1.0 - pace_weight
+
+        with db.cursor() as cursor:
+            # ── 1. Historical full-month totals (exclude current month) ──────────
+            cursor.execute(
+                """
+                SELECT
+                    YEAR(txn_date)  AS y,
+                    MONTH(txn_date) AS m,
+                    category,
+                    SUM(amount)     AS total
+                FROM transactions
+                WHERE user_id = %s
+                  AND txn_type = 'debit'
+                  AND NOT (YEAR(txn_date) = %s AND MONTH(txn_date) = %s)
+                GROUP BY YEAR(txn_date), MONTH(txn_date), category
+                ORDER BY y ASC, m ASC
+                """,
+                (user_id, cur_year, cur_month)
+            )
+            hist_rows = cursor.fetchall()
+
+            # ── 2. Current month partial spend per category ───────────────────────
+            cursor.execute(
+                """
+                SELECT category, SUM(amount) AS spent
+                FROM transactions
+                WHERE user_id = %s
+                  AND txn_type = 'debit'
+                  AND YEAR(txn_date) = %s AND MONTH(txn_date) = %s
+                GROUP BY category
+                """,
+                (user_id, cur_year, cur_month)
+            )
+            cur_rows = cursor.fetchall()
+            cur_spend = {
+                (r['category'] or 'Uncategorized'): float(r['spent'])
+                for r in cur_rows
+            }
+
+            # ── 3. Budget limits for current month ────────────────────────────────
+            cursor.execute(
+                """
+                SELECT category, amount
+                FROM budgets
+                WHERE user_id = %s AND month = %s AND year = %s
+                  AND category != 'Global'
+                """,
+                (user_id, cur_month, cur_year)
+            )
+            budget_rows = cursor.fetchall()
+            budgets = {r['category']: float(r['amount']) for r in budget_rows}
+
+        # ── 4. Pivot historical data into per-category time series ─────────────
+        # Build a sorted list of (year, month) tuples that appear in history
+        month_order = {}
+        for row in hist_rows:
+            key = (row['y'], row['m'])
+            if key not in month_order:
+                month_order[key] = len(month_order) + 1   # 1-indexed
+
+        # cat → { month_index: total }
+        cat_history = defaultdict(dict)
+        for row in hist_rows:
+            idx = month_order[(row['y'], row['m'])]
+            cat = row['category'] or 'Uncategorized'
+            cat_history[cat][idx] = float(row['total'])
+
+        # Current month index = one step beyond the last historical index
+        n_hist_months = len(month_order)
+        cur_idx = n_hist_months + 1
+
+        # Union of all categories seen in history OR current month
+        all_cats = sorted(set(cat_history.keys()) | set(cur_spend.keys()))
+
+        # ── 5. Fit per-category LinearRegression + blend ──────────────────────
+        results = []
+        for cat in all_cats:
+            spent_so_far = cur_spend.get(cat, 0.0)
+            history = cat_history.get(cat, {})
+            budget_limit = budgets.get(cat, 0.0)
+            n_hist = len(history)
+
+            # ── ML: Linear Regression ───────────────────────────────────────
+            if n_hist >= 2:
+                X = np.array(list(history.keys())).reshape(-1, 1)
+                y = np.array(list(history.values()))
+                model = LinearRegression()
+                model.fit(X, y)
+                trend_pred = float(model.predict([[cur_idx]])[0])
+
+                # Trend direction from slope
+                slope = float(model.coef_[0])
+                if slope > 50:
+                    trend = "up"
+                elif slope < -50:
+                    trend = "down"
+                else:
+                    trend = "stable"
+            elif n_hist == 1:
+                # Only one historical month: use it as flat baseline
+                trend_pred = list(history.values())[0]
+                trend = "stable"
+            else:
+                # No history: extrapolate purely from pace
+                trend_pred = (
+                    (spent_so_far / days_elapsed) * days_in_month
+                    if days_elapsed > 0 else spent_so_far
+                )
+                trend = "stable"
+
+            # ── Pace projection ─────────────────────────────────────────────
+            if days_elapsed > 0 and spent_so_far > 0:
+                pace_proj = (spent_so_far / days_elapsed) * days_in_month
+            else:
+                pace_proj = trend_pred  # fallback: pure trend
+
+            # ── Blend ────────────────────────────────────────────────────────
+            predicted = pace_weight * pace_proj + trend_weight * trend_pred
+            predicted = max(predicted, spent_so_far)   # never predict < already spent
+            predicted = round(predicted, 2)
+
+            # Historical average (all past months for this category)
+            historical_avg = round(sum(history.values()) / n_hist, 2) if n_hist > 0 else 0.0
+
+            # ── Confidence ───────────────────────────────────────────────────
+            if days_elapsed >= 15 and n_hist >= 3:
+                confidence = "high"
+            elif days_elapsed >= 5 and n_hist >= 2:
+                confidence = "medium"
+            else:
+                confidence = "low"
+
+            # ── Budget status ────────────────────────────────────────────────
+            if budget_limit > 0:
+                ratio = predicted / budget_limit
+                if ratio >= 1.0:
+                    budget_status = "over_budget"
+                elif ratio >= 0.8:
+                    budget_status = "warning"
+                else:
+                    budget_status = "on_track"
+            else:
+                budget_status = "no_budget"
+
+            results.append({
+                "category":       cat,
+                "spent_so_far":   round(spent_so_far, 2),
+                "predicted_total": predicted,
+                "historical_avg":  historical_avg,
+                "trend":          trend,
+                "confidence":     confidence,
+                "budget_limit":   budget_limit,
+                "budget_status":  budget_status,
+            })
+
+        # Sort: over_budget → warning → on_track / no_budget, then by predicted desc
+        status_order = {"over_budget": 0, "warning": 1, "on_track": 2, "no_budget": 3}
+        results.sort(key=lambda x: (status_order.get(x["budget_status"], 3), -x["predicted_total"]))
+
+        # ── 6. Totals ─────────────────────────────────────────────────────────
+        total_spent_so_far = round(sum(r["spent_so_far"] for r in results), 2)
+        total_predicted    = round(sum(r["predicted_total"] for r in results), 2)
+        total_hist_avg     = round(sum(r["historical_avg"] for r in results), 2)
+        total_budget       = round(sum(budgets.values()), 2)
+
+        if total_budget > 0:
+            total_ratio = total_predicted / total_budget
+            total_status = (
+                "over_budget" if total_ratio >= 1.0
+                else "warning" if total_ratio >= 0.8
+                else "on_track"
+            )
+        else:
+            total_status = "no_budget"
+
+        month_names = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+
+        return jsonify({
+            "success":       True,
+            "month_name":    f"{month_names[cur_month - 1]} {cur_year}",
+            "days_elapsed":  days_elapsed,
+            "days_in_month": days_in_month,
+            "categories":    results,
+            "total": {
+                "spent_so_far":    total_spent_so_far,
+                "predicted_total": total_predicted,
+                "historical_avg":  total_hist_avg,
+                "budget_limit":    total_budget,
+                "budget_status":   total_status,
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Error generating predictions: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({"success": False, "message": "Failed to generate predictions"}), 500
+    finally:
+        db.close()
+
 
 @transactions_bp.route("/trends", methods=["GET"])
 @jwt_required()

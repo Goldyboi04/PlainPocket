@@ -20,6 +20,8 @@
   --color-danger-bg: #FFF5F5;
   --color-success: #1A7F5A;
   --color-success-bg: #E8F5EF;
+  --color-warning: #B45309;
+  --color-warning-bg: #FFF8EB;
 
   --color-text: #1A1A1A;
   --color-text-secondary: #666666;
@@ -81,6 +83,8 @@
   --color-danger-bg: rgba(248, 113, 113, 0.15);
   --color-success: #34D399;
   --color-success-bg: rgba(16, 185, 129, 0.15);
+  --color-warning: #FBBF24;
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
 
   --color-text: #F4F4F5;
   --color-text-secondary: #A1A1AA;
