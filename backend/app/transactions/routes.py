@@ -285,12 +285,20 @@ def get_predictions():
             budget_limit = budgets.get(cat, 0.0)
             n_hist = len(history)
 
-            # ── ML: Linear Regression ───────────────────────────────────────
+            # ── ML: Weighted Linear Regression ───────────────────────────────
             if n_hist >= 2:
-                X = np.array(list(history.keys())).reshape(-1, 1)
-                y = np.array(list(history.values()))
+                # Sort history items by month index to ensure correct weight ordering
+                sorted_history = sorted(history.items())
+                X = np.array([item[0] for item in sorted_history]).reshape(-1, 1)
+                y = np.array([item[1] for item in sorted_history])
+                
+                # Apply exponential weight decay (alpha = 0.8)
+                # The most recent month gets weight 1.0, older months decay by 0.8 per month
+                alpha = 0.8
+                weights = np.array([alpha ** (n_hist - 1 - i) for i in range(n_hist)])
+                
                 model = LinearRegression()
-                model.fit(X, y)
+                model.fit(X, y, sample_weight=weights)
                 trend_pred = float(model.predict([[cur_idx]])[0])
 
                 # Trend direction from slope
