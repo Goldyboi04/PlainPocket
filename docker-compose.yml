@@ -24,6 +24,8 @@ services:
     volumes:
       - ./backend:/app
       - /app/__pycache__
+    env_file:
+      - ./backend/.env
     environment:
       - FLASK_ENV=development
       - MYSQL_HOST=db

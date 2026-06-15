@@ -9,6 +9,7 @@ import Statements from "./pages/Statements";
 import Transactions from "./pages/Transactions";
 import Budget from "./pages/Budget";
 import Trends from "./pages/Trends";
+import Chat from "./pages/Chat";
 import Layout from "./components/Layout";
 import "./index.css";
 
@@ -43,6 +44,7 @@ function AppRoutes() {
                 <Route path="/all-transactions" element={<Transactions />} />
                 <Route path="/budget" element={<Budget />} />
                 <Route path="/trends" element={<Trends />} />
+                <Route path="/chat" element={<Chat />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
             </Layout>

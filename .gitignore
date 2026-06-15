@@ -7,3 +7,4 @@ dist/
 backend/uploads/
 backend/scratch/
 *.pkl
+.env

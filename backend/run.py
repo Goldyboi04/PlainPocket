@@ -11,6 +11,7 @@ from app.upload.routes import upload_bp
 from app.transactions.routes import transactions_bp
 from app.statements.routes import statements_bp
 from app.budget.routes import budget_bp
+from app.chat.routes import chat_bp
 
 
 def create_app():
@@ -28,6 +29,7 @@ def create_app():
     app.register_blueprint(transactions_bp)
     app.register_blueprint(statements_bp)
     app.register_blueprint(budget_bp)
+    app.register_blueprint(chat_bp)
 
     # Initialize database
     with app.app_context():
