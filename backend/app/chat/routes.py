@@ -94,9 +94,32 @@ RULES:
 8. When the user says "last month", subtract 1 from the current month appropriately.
 9. Format aggregated amounts using ROUND(..., 2).
 10. Use meaningful column aliases (e.g. AS total_spent, AS category_name).
+11. ALWAYS ensure that any column in the SELECT list that is not part of an aggregate function (like SUM, AVG, COUNT, MIN, MAX) is listed in the GROUP BY clause if the query contains a GROUP BY clause.
+12. When joining multiple tables (e.g. transactions and budgets), ALWAYS prefix all column references (like category, user_id, amount) with their respective table name or table alias to prevent "ambiguous column" errors (e.g. use `t.category` or `transactions.category` instead of just `category`).
+13. Note that the column for category in both the `transactions` and `budgets` tables is literally named `category`. Do NOT select `category_name` directly from any table, as this column does not exist (only use `category_name` as an alias in the final output, e.g. `SELECT category AS category_name`).
+14. For questions about going over budget or budget forecasting, generate a query that joins the 'budgets' and 'transactions' tables to retrieve the budget limits and actual current-month spending per category. To support trend analysis, you may also join or subquery historical monthly transaction averages or previous monthly spending totals per category.
 
 Respond ONLY with a valid JSON object in this exact format (no markdown, no code fences):
 {"sql": "<the MySQL SELECT query>", "explanation": "<1-2 sentence plain-English explanation of what this query does>"}
+"""
+
+RESPONSE_SYSTEM_PROMPT = """You are a helpful, conversational personal finance AI assistant for the app PlainPocket.
+The user asked: "{question}"
+To find the answer, the following SQL query was executed:
+{sql}
+
+The query returned the following results from the user's database:
+{results}
+
+Please write a natural, authentic, and direct response to the user's question based on these results.
+RULES:
+1. Speak directly and conversationally to the user (e.g. "You spent ₹4,500..." or "You have ₹2,000 left in your budget...").
+2. Do NOT mention SQL, queries, tables, database, schema, or code in your explanation. Speak only about financial facts, categories, amounts, dates, and transactions.
+3. Keep the response concise, informative, and friendly (2-4 sentences is usually perfect).
+4. Use markdown formatting (like bolding numbers or category names, bullet points for lists) to make the response highly readable.
+5. If no results were found, let the user know gently and suggest what they can check (e.g. if they uploaded statements or set budgets).
+6. Format amounts as INR currency (e.g. ₹X,XXX).
+7. If the user asks about going over budget, forecasting, or trends: analyze their current spending vs. budget limit and project their final spending using the burn rate (current spending relative to current day of the month) or historical monthly averages. Provide clear, actionable recommendations on what they should do to avoid overspending (e.g. identify which specific categories need cutting back, and suggest concrete limits or tips).
 """
 
 
@@ -286,10 +309,49 @@ def chat():
                         clean_row[key] = str(val)
                 serialised_rows.append(clean_row)
 
+            # ── 5. Generate conversational response (Pass 2) ──────────────────
+            conversational_prompt = RESPONSE_SYSTEM_PROMPT.format(
+                question=question,
+                sql=sanitised_sql,
+                results=json.dumps(serialised_rows, indent=2)
+            )
+
+            conversational_answer = None
+            if Config.OPENAI_API_KEY:
+                try:
+                    openai_client = _get_openai_client()
+                    response2 = openai_client.chat.completions.create(
+                        model=Config.OPENAI_MODEL,
+                        messages=[
+                            {"role": "user", "content": conversational_prompt}
+                        ],
+                        temperature=0.7,
+                    )
+                    conversational_answer = response2.choices[0].message.content.strip()
+                except Exception as e:
+                    print(f"OpenAI API Pass 2 error: {e}")
+                    traceback.print_exc()
+            else:
+                try:
+                    client = _get_client()
+                    response2 = client.models.generate_content(
+                        model=Config.GEMINI_MODEL,
+                        contents=conversational_prompt,
+                    )
+                    conversational_answer = response2.text.strip()
+                except Exception as e:
+                    print(f"Gemini API Pass 2 error: {e}")
+                    traceback.print_exc()
+
+            # Fallback if synthesis fails
+            if not conversational_answer:
+                conversational_answer = explanation or "Here are the query results from your database."
+
             return jsonify({
                 "success": True,
                 "sql": sanitised_sql,
-                "explanation": explanation,
+                "explanation": conversational_answer,
+                "query_explanation": explanation,
                 "columns": columns,
                 "results": serialised_rows,
                 "row_count": len(serialised_rows),

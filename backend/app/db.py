@@ -12,13 +12,14 @@ def get_db():
         user=Config.MYSQL_USER,
         password=Config.MYSQL_PASSWORD,
         database=Config.MYSQL_DB,
-        cursorclass=pymysql.cursors.DictCursor
+        cursorclass=pymysql.cursors.DictCursor,
+        init_command="SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))"
     )
 
 
 def init_db():
     """Initialize the database with required tables."""
-    retries = 5
+    retries = 20
     conn = None
     
     print(f"Connecting to MySQL at {Config.MYSQL_HOST}...")

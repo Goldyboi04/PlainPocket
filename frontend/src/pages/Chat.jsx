@@ -87,11 +87,16 @@ export default function Chat() {
         ]);
       }
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.message || "Failed to reach the server. Please try again.";
+      const data = err.response?.data || {};
+      const errorMsg = data.message || "Failed to reach the server. Please try again.";
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: errorMsg, isError: true },
+        {
+          role: "assistant",
+          content: errorMsg,
+          sql: data.sql || null,
+          isError: true
+        },
       ]);
     } finally {
       setLoading(false);
@@ -191,24 +196,16 @@ export default function Chat() {
                 {/* Text content */}
                 <p className="message-text">{msg.content}</p>
 
-                {/* SQL block (assistant only) */}
+                {/* Collapsible Technical Details (assistant only) */}
                 {msg.sql && (
-                  <SQLBlock sql={msg.sql} onCopy={copyToClipboard} />
-                )}
-
-                {/* Results table (assistant only) */}
-                {msg.results && msg.results.length > 0 && (
-                  <ResultsTable
+                  <QueryInspector
+                    sql={msg.sql}
                     columns={msg.columns}
                     results={msg.results}
                     rowCount={msg.row_count}
+                    isError={msg.isError}
+                    onCopy={copyToClipboard}
                   />
-                )}
-
-                {msg.results && msg.results.length === 0 && !msg.isError && (
-                  <div className="empty-results">
-                    <span>No matching records found.</span>
-                  </div>
                 )}
               </div>
               {msg.role === "user" && (
@@ -272,6 +269,72 @@ export default function Chat() {
           AI-generated SQL may not always be perfect. Always verify results.
         </p>
       </div>
+    </div>
+  );
+}
+
+
+// ── Query Inspector Component ─────────────────────────────────────────────────
+function QueryInspector({ sql, columns, results, rowCount, isError, onCopy }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    onCopy(sql);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="query-inspector">
+      <div className="inspector-header" onClick={() => setIsOpen(!isOpen)}>
+        <div className="inspector-title">
+          <svg className="inspector-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+          <span>{isOpen ? "Hide Technical Details" : "View Technical Details"}</span>
+        </div>
+        <svg
+          className={`inspector-chevron ${isOpen ? "open" : ""}`}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+        >
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+
+      {isOpen && (
+        <div className="inspector-body">
+          <div className="inspector-sql-section">
+            <div className="inspector-sql-header">
+              <span className="inspector-sql-label">Generated SQL</span>
+              <button className="inspector-copy-btn" onClick={handleCopy}>
+                {copied ? "✓ Copied" : "Copy Query"}
+              </button>
+            </div>
+            <div className="inspector-code-wrapper">
+              <pre className="inspector-code">{sql}</pre>
+            </div>
+          </div>
+
+          <div className="inspector-data-section">
+            {results && results.length > 0 ? (
+              <ResultsTable
+                columns={columns}
+                results={results}
+                rowCount={rowCount}
+              />
+            ) : (
+              results && results.length === 0 && !isError && (
+                <div className="empty-results">
+                  <span>No matching records found.</span>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
