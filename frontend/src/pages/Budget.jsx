@@ -192,7 +192,7 @@ export default function Budget() {
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           {budget.budget_inherited
-            ? `Viewing past month — budget limits shown are inherited from the current month's budget.`
+            ? `Viewing past month — budget limits shown are inherited from another month's budget.`
             : `Viewing past month — budget limits are read-only. Switch to the current month to edit.`
           }
         </div>

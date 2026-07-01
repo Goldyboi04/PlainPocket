@@ -34,18 +34,49 @@ def get_budget():
             budget_rows = cursor.fetchall()
             category_budgets = {row['category']: float(row['amount']) for row in budget_rows}
 
-            # 1b. If no budget set for this past month, fall back to current month's budget
+            # 1b. If no budget set for this past month, try to inherit from the most recent preceding month's budget.
+            # If no preceding budget exists, inherit from the earliest succeeding month's budget.
             is_current_month = (month == now.month and year == now.year)
             budget_inherited = False
             if not category_budgets and not is_current_month:
+                # 1. Look for the most recent preceding month's budget
                 cursor.execute(
-                    "SELECT category, amount FROM budgets WHERE user_id = %s AND month = %s AND year = %s AND category != 'Global'",
-                    (user_id, now.month, now.year)
+                    """
+                    SELECT month, year FROM budgets
+                    WHERE user_id = %s AND category != 'Global'
+                      AND (year < %s OR (year = %s AND month < %s))
+                    ORDER BY year DESC, month DESC
+                    LIMIT 1
+                    """,
+                    (user_id, year, year, month)
                 )
-                fallback_rows = cursor.fetchall()
-                if fallback_rows:
-                    category_budgets = {row['category']: float(row['amount']) for row in fallback_rows}
-                    budget_inherited = True
+                fallback_row = cursor.fetchone()
+                
+                # 2. If not found, look for the earliest succeeding month's budget
+                if not fallback_row:
+                    cursor.execute(
+                        """
+                        SELECT month, year FROM budgets
+                        WHERE user_id = %s AND category != 'Global'
+                        ORDER BY year ASC, month ASC
+                        LIMIT 1
+                        """,
+                        (user_id,)
+                    )
+                    fallback_row = cursor.fetchone()
+
+                # 3. If a fallback month is found, fetch its budget
+                if fallback_row:
+                    fallback_month = fallback_row['month']
+                    fallback_year = fallback_row['year']
+                    cursor.execute(
+                        "SELECT category, amount FROM budgets WHERE user_id = %s AND month = %s AND year = %s AND category != 'Global'",
+                        (user_id, fallback_month, fallback_year)
+                    )
+                    fallback_rows = cursor.fetchall()
+                    if fallback_rows:
+                        category_budgets = {row['category']: float(row['amount']) for row in fallback_rows}
+                        budget_inherited = True
 
             # 2. Overall budget limit = sum of all category budgets
             budget_limit = sum(category_budgets.values())
